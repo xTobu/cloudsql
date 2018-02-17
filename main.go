@@ -1,17 +1,17 @@
-// Copyright 2016 Google Inc. All rights reserved.
+// Copyright 2015 Google Inc. All rights reserved.
 // Use of this source code is governed by the Apache 2.0
 // license that can be found in the LICENSE file.
 
-// Sample cloudsql demonstrates connection to a Cloud SQL instance from App Engine standard.
+// Sample cloudsql demonstrates usage of Cloud SQL from App Engine flexible environment.
 package main
 
 import (
-	"bytes"
 	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"google.golang.org/appengine"
 
@@ -21,53 +21,89 @@ import (
 var db *sql.DB
 
 func main() {
-	var (
-		connectionName = mustGetenv("CLOUDSQL_CONNECTION_NAME")
-		user           = mustGetenv("CLOUDSQL_USER")
-		password       = os.Getenv("CLOUDSQL_PASSWORD") // NOTE: password may be empty
-	)
+	// Set this in app.yaml when running in production.
+	datastoreName := os.Getenv("MYSQL_CONNECTION")
 
 	var err error
-	db, err = sql.Open("mysql", fmt.Sprintf("%s:%s@cloudsql(%s)/", user, password, connectionName))
+	db, err = sql.Open("mysql", datastoreName)
 	if err != nil {
-		log.Fatalf("Could not open db: %v", err)
+		log.Fatal(err)
 	}
 
-	http.HandleFunc("/", handler)
+	// Ensure the table exists.
+	// Running an SQL query also checks the connection to the MySQL server
+	// is authenticated and valid.
+	if err := createTable(); err != nil {
+		log.Fatal(err)
+	}
+
+	http.HandleFunc("/", handle)
 	appengine.Main()
 }
 
-func handler(w http.ResponseWriter, r *http.Request) {
+func createTable() error {
+	stmt := `CREATE TABLE IF NOT EXISTS visits (
+			timestamp  BIGINT,
+			userip     VARCHAR(255)
+		)`
+	_, err := db.Exec(stmt)
+	return err
+}
+
+func handle(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/plain")
-
-	rows, err := db.Query("SHOW DATABASES")
+	// Get a list of the most recent visits.
+	visits, err := queryVisits(10)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Could not query db: %v", err), 500)
+		msg := fmt.Sprintf("Could not get recent visits: %v", err)
+		http.Error(w, msg, http.StatusInternalServerError)
 		return
+	}
+
+	// Record this visit.
+	if err := recordVisit(time.Now().UnixNano(), r.RemoteAddr); err != nil {
+		msg := fmt.Sprintf("Could not save visit: %v", err)
+		http.Error(w, msg, http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprintln(w, "Previous visits:")
+	for _, v := range visits {
+		fmt.Fprintf(w, "[%s] %s\n", time.Unix(0, v.timestamp), v.userIP)
+	}
+	fmt.Fprintln(w, "\nSuccessfully stored an entry of the current request.")
+}
+
+type visit struct {
+	timestamp int64
+	userIP    string
+}
+
+func recordVisit(timestamp int64, userIP string) error {
+	stmt := "INSERT INTO visits (timestamp, userip) VALUES (?, ?)"
+	_, err := db.Exec(stmt, timestamp, userIP)
+	return err
+}
+
+func queryVisits(limit int64) ([]visit, error) {
+	rows, err := db.Query("SELECT timestamp, userip FROM visits ORDER BY timestamp DESC LIMIT ?", limit)
+	if err != nil {
+		return nil, fmt.Errorf("Could not get recent visits: %v", err)
 	}
 	defer rows.Close()
 
-	buf := bytes.NewBufferString("Databases:\n")
+	var visits []visit
 	for rows.Next() {
-		var dbName string
-		if err := rows.Scan(&dbName); err != nil {
-			http.Error(w, fmt.Sprintf("Could not scan result: %v", err), 500)
-			return
+		var v visit
+		if err := rows.Scan(&v.timestamp, &v.userIP); err != nil {
+			return nil, fmt.Errorf("Could not get timestamp/user IP out of row: %v", err)
 		}
-		fmt.Fprintf(buf, "- %s\n", dbName)
+		visits = append(visits, v)
 	}
-	w.Write(buf.Bytes())
-}
 
-func mustGetenv(k string) string {
-	v := os.Getenv(k)
-	if v == "" {
-		log.Panicf("%s environment variable not set.", k)
-	}
-	return v
+	return visits, rows.Err()
 }
