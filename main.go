@@ -13,15 +13,34 @@ import (
 	"os"
 	"time"
 
-	"google.golang.org/appengine"
-
+	"github.com/gin-gonic/contrib/static"
+	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
+	"google.golang.org/appengine"
 )
+
+//Config struct
+type Config struct {
+	Port         string
+	StaticFolder string
+	IndexFile    string
+}
+
+//SetDefault Sever data
+func (config *Config) SetDefault() {
+	config.Port = ":8000"
+	config.StaticFolder = "./dist"
+	config.IndexFile = "./index.html"
+}
 
 var db *sql.DB
 
 func main() {
 	// Set this in app.yaml when running in production.
+
+	// set config
+	config := Config{}
+	config.SetDefault()
 
 	datastoreName := os.Getenv("MYSQL_CONNECTION")
 	//datastoreName = "Junxiang:rmp4vu;6@tcp(127.0.0.1:3306)/junxiang_db"
@@ -38,7 +57,18 @@ func main() {
 		log.Fatal(err)
 	}
 
-	http.HandleFunc("/", handle)
+	//http.HandleFunc("/", handle)
+
+	// Creates a default gin router
+	router := gin.Default() // Grouping routes
+	router.Use(static.Serve("/dist", static.LocalFile(config.StaticFolder, true)))
+	router.LoadHTMLGlob(config.IndexFile)
+	router.GET("/vue", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "index.html", gin.H{"title": "hello Gin."})
+
+		//c.JSON(200, gin.H{"code": "PAGE_NOT_FOUND", "message": "Page not found"})
+	})
+	router.Run(config.Port)
 	appengine.Main()
 }
 
