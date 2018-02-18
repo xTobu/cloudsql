@@ -22,8 +22,9 @@ var db *sql.DB
 
 func main() {
 	// Set this in app.yaml when running in production.
-	datastoreName := os.Getenv("MYSQL_CONNECTION")
 
+	datastoreName := os.Getenv("MYSQL_CONNECTION")
+	//datastoreName = "Junxiang:rmp4vu;6@tcp(127.0.0.1:3306)/junxiang_db"
 	var err error
 	db, err = sql.Open("mysql", datastoreName)
 	if err != nil {
