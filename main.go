@@ -19,18 +19,18 @@ import (
 )
 
 //Config struct
-type Config struct {
-	Port         string
-	StaticFolder string
-	IndexFile    string
-}
+// type Config struct {
+// 	Port         string
+// 	StaticFolder string
+// 	IndexFile    string
+// }
 
-//SetDefault Sever data
-func (config *Config) SetDefault() {
-	config.Port = ":8000"
-	config.StaticFolder = "./dist"
-	config.IndexFile = "./index.html"
-}
+// //SetDefault Sever data
+// func (config *Config) SetDefault() {
+// 	config.Port = ":8000"
+// 	config.StaticFolder = "./dist"
+// 	config.IndexFile = "./index.html"
+// }
 
 var db *sql.DB
 
@@ -54,7 +54,7 @@ func main() {
 
 	//http.HandleFunc("/", handle)
 
-	Init()
+	start()
 	appengine.Main()
 }
 

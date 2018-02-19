@@ -29,7 +29,7 @@ func (config *Config) SetDefault() {
 ////////////////////
 
 // Init blablaba
-func Init() {
+func start() {
 	// set config
 	config := Config{}
 	config.SetDefault()
