@@ -13,8 +13,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/gin-gonic/contrib/static"
-	"github.com/gin-gonic/gin"
+	//"./App_Start"
 	_ "github.com/go-sql-driver/mysql"
 	"google.golang.org/appengine"
 )
@@ -38,12 +37,8 @@ var db *sql.DB
 func main() {
 	// Set this in app.yaml when running in production.
 
-	// set config
-	config := Config{}
-	config.SetDefault()
-
 	datastoreName := os.Getenv("MYSQL_CONNECTION")
-	//datastoreName = "Junxiang:rmp4vu;6@tcp(127.0.0.1:3306)/junxiang_db"
+	datastoreName = "Junxiang:rmp4vu;6@tcp(127.0.0.1:3306)/junxiang_db"
 	var err error
 	db, err = sql.Open("mysql", datastoreName)
 	if err != nil {
@@ -59,16 +54,7 @@ func main() {
 
 	//http.HandleFunc("/", handle)
 
-	// Creates a default gin router
-	router := gin.Default() // Grouping routes
-	router.Use(static.Serve("/dist", static.LocalFile(config.StaticFolder, true)))
-	router.LoadHTMLGlob(config.IndexFile)
-	router.GET("/vue", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.html", gin.H{"title": "hello Gin."})
-
-		//c.JSON(200, gin.H{"code": "PAGE_NOT_FOUND", "message": "Page not found"})
-	})
-	router.Run(config.Port)
+	Init()
 	appengine.Main()
 }
 
