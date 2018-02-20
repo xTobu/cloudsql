@@ -6,6 +6,7 @@
 package main
 
 import (
+	"cloudsql/AppStart"
 	"database/sql"
 	"fmt"
 	"log"
@@ -13,7 +14,6 @@ import (
 	"os"
 	"time"
 
-	//"./App_Start"
 	_ "github.com/go-sql-driver/mysql"
 	"google.golang.org/appengine"
 )
@@ -54,7 +54,7 @@ func main() {
 
 	//http.HandleFunc("/", handle)
 
-	start()
+	AppStart.RouteConfig()
 	appengine.Main()
 }
 

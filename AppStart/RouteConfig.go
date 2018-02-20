@@ -1,11 +1,11 @@
-package main
+package AppStart
 
 import (
 	//"../Controllers"
 	"github.com/gin-gonic/gin"
 	//go-mssqldb
 	//_ "github.com/denisenkom/go-mssqldb"
-
+	"cloudsql/Controllers"
 	//mysql
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -21,15 +21,15 @@ type Config struct {
 
 //SetDefault Sever data
 func (config *Config) SetDefault() {
-	config.Port = ":8000"
+	config.Port = ":8080"
 	config.StaticFolder = "../dist"
 	config.IndexFile = "../index.html"
 }
 
 ////////////////////
 
-// Init blablaba
-func start() {
+// RouteConfig blablaba
+func RouteConfig() {
 	// set config
 	config := Config{}
 	config.SetDefault()
@@ -40,9 +40,17 @@ func start() {
 	//group： url //首頁
 	url := router.Group("/")
 	{
-		url.GET("/", Hello)
+		url.GET("/", Controllers.Hello)
 
 	}
+
+	//group： api //api
+	api := router.Group("/api")
+	{
+		api.GET("/get", Controllers.Student)
+		api.POST("/post", Controllers.Insert)
+	}
+
 	router.Run(config.Port) // listen and serve on 0.0.0.0:8000
 
 }
